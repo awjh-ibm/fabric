@@ -210,7 +210,15 @@ func (handler *Handler) handleInit(msg *pb.ChaincodeMessage, errc chan error) {
 		if nextStateMsg = errFunc(err, nil, stub.chaincodeEvent, "[%s] Init get error response. Sending %s", shorttxid(msg.Txid), pb.ChaincodeMessage_ERROR.String()); nextStateMsg != nil {
 			return
 		}
-		res := handler.cc.Init(stub)
+
+		var res pb.Response
+
+		if cc, ok := handler.cc.(SystemChaincode); ok {
+			res = cc.Init(stub)
+		} else {
+			res = callFunctionInMap(stub)
+		}
+
 		chaincodeLogger.Debugf("[%s] Init get response status: %d", shorttxid(msg.Txid), res.Status)
 
 		if res.Status >= ERROR {
@@ -270,7 +278,14 @@ func (handler *Handler) handleTransaction(msg *pb.ChaincodeMessage, errc chan er
 		if nextStateMsg = errFunc(err, stub.chaincodeEvent, "[%s] Transaction execution failed. Sending %s", shorttxid(msg.Txid), pb.ChaincodeMessage_ERROR.String()); nextStateMsg != nil {
 			return
 		}
-		res := handler.cc.Invoke(stub)
+
+		var res pb.Response
+
+		if cc, ok := handler.cc.(SystemChaincode); ok {
+			res = cc.Invoke(stub)
+		} else {
+			res = callFunctionInMap(stub)
+		}
 
 		// Endorser will handle error contained in Response.
 		resBytes, err := proto.Marshal(&res)
@@ -754,4 +769,22 @@ func (handler *Handler) handleMessage(msg *pb.ChaincodeMessage, errc chan error)
 	}
 
 	return nil
+}
+
+func callFunctionInMap(stub ChaincodeStubInterface) pb.Response {
+	fn, _ := stub.GetFunctionAndParameters()
+	ccFunction, err := getFunctionFromMap(fn)
+	if err != nil {
+		msg := fmt.Sprintf("Function named '%s' does not exist in chaincode", fn)
+		return Error(msg)
+	}
+	return ccFunction(stub)
+}
+
+func getFunctionFromMap(name string) (func(ChaincodeStubInterface) pb.Response, error) {
+	if mapVal, ok := chaincodeMap[name]; ok {
+		return mapVal.(func(ChaincodeStubInterface) pb.Response), nil
+	}
+
+	return nil, errors.Errorf("Function '%s' does not exist in chaincode", name)
 }

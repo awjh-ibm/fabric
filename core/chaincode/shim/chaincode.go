@@ -14,6 +14,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -77,6 +78,8 @@ type peerStreamGetter func(name string) (PeerChaincodeStream, error)
 //UTs to setup mock peer stream getter
 var streamGetter peerStreamGetter
 
+var chaincodeMap = make(map[string]interface{})
+
 //the non-mock user CC stream establishment func
 func userChaincodeStreamGetter(name string) (PeerChaincodeStream, error) {
 	flag.StringVar(&peerAddress, "peer.address", "", "peer address")
@@ -135,6 +138,14 @@ func Start(cc Chaincode) error {
 	chaincodename := viper.GetString("chaincode.id.name")
 	if chaincodename == "" {
 		return errors.New("error chaincode id not provided")
+	}
+
+	ccValue := reflect.ValueOf(cc)
+	ccType := reflect.TypeOf(cc)
+	for i := 0; i < ccType.NumMethod(); i++ {
+		valueMethod := ccValue.Method(i)
+		typeMethod := ccType.Method(i)
+		chaincodeMap[typeMethod.Name] = valueMethod.Interface()
 	}
 
 	err := factory.InitFactories(factory.GetDefaultOpts())

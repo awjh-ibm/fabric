@@ -15,7 +15,11 @@ import (
 
 // Chaincode interface must be implemented by all chaincodes. The fabric runs
 // the transactions by calling these functions as specified.
-type Chaincode interface {
+type Chaincode interface{}
+
+// SystemChaincode interface must be implemented by all chaincodes. The fabric runs
+// the transactions by calling these functions as specified.
+type SystemChaincode interface {
 	// Init is called during Instantiate transaction after the chaincode container
 	// has been established for the first time, allowing the chaincode to
 	// initialize its internal data

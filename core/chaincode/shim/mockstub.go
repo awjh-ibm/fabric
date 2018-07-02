@@ -122,7 +122,21 @@ func (stub *MockStub) MockPeerChaincode(invokableChaincodeName string, otherStub
 func (stub *MockStub) MockInit(uuid string, args [][]byte) pb.Response {
 	stub.args = args
 	stub.MockTransactionStart(uuid)
-	res := stub.cc.Init(stub)
+
+	var res pb.Response
+
+	if cc, ok := stub.cc.(SystemChaincode); ok {
+		res = cc.Init(stub)
+	} else {
+		fn, _ := stub.GetFunctionAndParameters()
+		ccFunction, err := getFunctionFromMap(fn)
+		if err != nil {
+			fmt.Println(err)
+			return Error("Function name not found for chaincode")
+		}
+		res = ccFunction(stub)
+	}
+
 	stub.MockTransactionEnd(uuid)
 	return res
 }
@@ -131,7 +145,21 @@ func (stub *MockStub) MockInit(uuid string, args [][]byte) pb.Response {
 func (stub *MockStub) MockInvoke(uuid string, args [][]byte) pb.Response {
 	stub.args = args
 	stub.MockTransactionStart(uuid)
-	res := stub.cc.Invoke(stub)
+
+	var res pb.Response
+
+	if cc, ok := stub.cc.(SystemChaincode); ok {
+		res = cc.Invoke(stub)
+	} else {
+		fn, _ := stub.GetFunctionAndParameters()
+		ccFunction, err := getFunctionFromMap(fn)
+		if err != nil {
+			fmt.Println(err)
+			return Error("Function name not found for chaincode")
+		}
+		res = ccFunction(stub)
+	}
+
 	stub.MockTransactionEnd(uuid)
 	return res
 }
@@ -145,7 +173,21 @@ func (stub *MockStub) MockInvokeWithSignedProposal(uuid string, args [][]byte, s
 	stub.args = args
 	stub.MockTransactionStart(uuid)
 	stub.signedProposal = sp
-	res := stub.cc.Invoke(stub)
+
+	var res pb.Response
+
+	if cc, ok := stub.cc.(SystemChaincode); ok {
+		res = cc.Invoke(stub)
+	} else {
+		fn, _ := stub.GetFunctionAndParameters()
+		ccFunction, err := getFunctionFromMap(fn)
+		if err != nil {
+			fmt.Println(err)
+			return Error("Function name not found for chaincode")
+		}
+		res = ccFunction(stub)
+	}
+
 	stub.MockTransactionEnd(uuid)
 	return res
 }
